@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword  } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword  } from "firebase/auth";
 
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -9,7 +9,8 @@ import { useState } from "react";
 const auth = getAuth(app);
 
 function App() {
-   const [validated, setValidated] = useState(false);
+  const [validated, setValidated] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,21 +39,58 @@ function App() {
 
     setValidated(true);
     setError('');
-    createUserWithEmailAndPassword(auth, email, password)
+
+    if (registered) {
+      signInWithEmailAndPassword(auth, email, password)
+        .then(result => {
+          const user = result.user;
+          console.log(user)
+        })
+        .catch(error => {
+          console.log(error);
+          setError(error.message);
+      })
+    }
+    else {
+      createUserWithEmailAndPassword(auth, email, password)
       .then(result => {
         const user = result.user;
         console.log(user);
+        emailVerify();
+        
       })
       .catch(error => {
-      console.error(error);
+        console.error(error);
+        setError(error.message);
     })
 
     console.log('submit',email,password);
+      
+    }
+    
     event.preventDefault();
   }
+
+  const emailVerify = () => {
+    sendEmailVerification(auth.currentUser)
+      .then(() => {
+      console.log('Email sent to your gmail account');
+    })
+  }
+
+  const resetPassword = () => {
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+      console.log('Password reset sent');
+    })
+  }
+
+  const handleToggleChange = (event) => {
+     setRegistered(event.target.checked);
+   }
   return (
     <div className="App">
-      <h2 className="text-primary text-center">Please register your account</h2>
+      <h2 className="text-primary text-center">Please {registered ? 'Login' : 'Register'} your account</h2>
 
 
       <Form noValidate validated={validated} onSubmit={handleSubmit} className="w-50 mx-auto mt-3">
@@ -76,10 +114,12 @@ function App() {
           <p className="text-danger">{ error}</p>
   </Form.Group>
   <Form.Group className="mb-3" controlId="formBasicCheckbox">
-    <Form.Check type="checkbox" label="Check me out" />
-  </Form.Group>
+    <Form.Check onChange={handleToggleChange} type="checkbox" label="Already registered?" />
+        </Form.Group>
+        <Button onClick={resetPassword} variant="link">Forget password? Reset Your Password</Button> 
+        <br />
   <Button variant="primary" type="submit">
-    Submit
+   {registered ? 'Login' : 'Register'}
   </Button>
 </Form>
 
